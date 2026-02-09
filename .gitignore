@@ -1,0 +1,12 @@
+# Results
+results/
+code/results/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
