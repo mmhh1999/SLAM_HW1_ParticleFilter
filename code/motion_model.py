@@ -6,7 +6,8 @@
 
 import sys
 import numpy as np
-import math
+# import math
+
 
 
 class MotionModel:
@@ -18,27 +19,22 @@ class MotionModel:
         """
         TODO : Tune Motion Model parameters here
         The original numbers are for reference but HAVE TO be tuned.
-        
-        Odometry Motion Model noise parameters (Ref: Probabilistic Robotics Table 5.6)
-        alpha1: rotation noise from rotation
-        alpha2: rotation noise from translation  
-        alpha3: translation noise from translation
-        alpha4: translation noise from rotation
         """
-        self._alpha1 = 0
-        self._alpha2 = 0
-        self._alpha3 = 0
-        self._alpha4 = 0
-        self.odom2world = 0 #-np.pi/2  # Rotation from odometry frame to world frame (90 degrees)
-        self.no_noise = True  # Set to True to disable noise for debugging and testing
+        # self._alpha1 = 0.01*10
+        # self._alpha2 = 0.01*10
+        # self._alpha3 = 0.01*10
+        # self._alpha4 = 0.01*10
+        self._alpha1 = 0.0005
+        self._alpha2 = 0.0005
+        self._alpha3 = 0.001
+        self._alpha4 = 0.001
 
-    def _normalize_angle(self, angle):
-        """Normalize angle to [-pi, pi]"""
-        while angle > np.pi:
-            angle -= 2 * np.pi
-        while angle < -np.pi:
-            angle += 2 * np.pi
-        return angle
+    def WrapToPi(self,angle):
+        
+        angWrap = angle - 2*np.pi * np.floor((angle + np.pi) / (2*np.pi))
+        return angWrap    
+    def sample(self,mu,sigma):
+        return np.random.normal(mu,sigma)
 
     def update(self, u_t0, u_t1, x_t0):
         """
@@ -47,40 +43,43 @@ class MotionModel:
         param[in] x_t0 : particle state belief [x, y, theta] at time (t-1) [world_frame]
         param[out] x_t1 : particle state belief [x, y, theta] at time t [world_frame]
         """
-        # Extract odometry readings
-        x_bar0, y_bar0, theta_bar0 = u_t0
-        x_bar1, y_bar1, theta_bar1 = u_t1
-        
-        # Extract current particle state
-        x0, y0, theta0 = x_t0
-        
-        # Step 1: Compute relative motion in odometry frame
-        delta_trans = np.sqrt((x_bar1 - x_bar0)**2 + (y_bar1 - y_bar0)**2)
-        
-        if delta_trans < 0.01:
-            delta_rot1 = 0.0
-        else:
-            delta_rot1 = self._normalize_angle(
-                np.arctan2(y_bar1 - y_bar0, x_bar1 - x_bar0) - theta_bar0
-            )
-        
-        delta_rot2 = self._normalize_angle(theta_bar1 - theta_bar0 - delta_rot1)
-        
-        # Step 2: Add Gaussian noise
-        if self.no_noise:
-            delta_rot1_hat, delta_trans_hat, delta_rot2_hat = delta_rot1, delta_trans, delta_rot2
-        else:
-            delta_rot1_var = self._alpha1 * delta_rot1**2 + self._alpha2 * delta_trans**2
-            delta_trans_var = self._alpha3 * delta_trans**2 + self._alpha4 * (delta_rot1**2 + delta_rot2**2)
-            delta_rot2_var = self._alpha1 * delta_rot2**2 + self._alpha2 * delta_trans**2
+        """
+        TODO : Add your code here
+        """
+
+        # NO MOTION
+        if u_t1[0] == u_t0[0] and u_t1[1] == u_t0[1] and u_t1[2] == u_t0[2]:
             
-            delta_rot1_hat = delta_rot1 - np.random.normal(0, np.sqrt(max(delta_rot1_var, 1e-10)))
-            delta_trans_hat = delta_trans - np.random.normal(0, np.sqrt(max(delta_trans_var, 1e-10)))
-            delta_rot2_hat = delta_rot2 - np.random.normal(0, np.sqrt(max(delta_rot2_var, 1e-10)))
+            x_t1 = x_t0
+            return x_t1
         
-        # Step 3: Apply noisy motion to particle state
-        x1 = x0 + delta_trans_hat * np.cos(theta0 + delta_rot1_hat + self.odom2world)
-        y1 = y0 + delta_trans_hat * np.sin(theta0 + delta_rot1_hat + self.odom2world)
-        theta1 = self._normalize_angle(theta0 + delta_rot1_hat + delta_rot2_hat)
+            
+
+        # MOTION    
+        x_t1 = np.zeros(x_t0.shape)
+        deltaR1 = np.arctan2(u_t1[1] - u_t0[1], u_t1[0] - u_t0[0]) - u_t0[2]
+        deltaR1 = self.WrapToPi(deltaR1)
+        deltaTrans = np.sqrt((u_t1[0] - u_t0[0])**2 + (u_t1[1] - u_t0[1])**2)
+        deltaR2 = u_t1[2] - u_t0[2] - deltaR1
+        deltaR2 = self.WrapToPi(deltaR2)
         
-        return np.array([x1, y1, theta1])
+        Rot1 = deltaR1 - self.sample(0, self._alpha1 * deltaR1**2 + \
+                                self._alpha2 * deltaTrans**2)
+        Trans = deltaTrans - self.sample(0,self._alpha3 * deltaTrans**2 + \
+                                     self._alpha4 * deltaR1**2 + self._alpha4*deltaR2**2)
+        Rot2 = deltaR2 - self.sample(0, self._alpha1 * deltaR2**2 + \
+                                self._alpha2 * deltaTrans**2)
+        Rot1 = self.WrapToPi(Rot1)
+        Rot2 = self.WrapToPi(Rot2)
+
+        x_t1[0] = x_t0[0] + Trans * np.cos(x_t0[2] + Rot1)
+        x_t1[1] = x_t0[1] + Trans * np.sin(x_t0[2] + Rot1)
+        x_t1[2] = x_t0[2] + Rot1 + Rot2
+
+        return x_t1
+
+
+        # SAMPLE : return 1/2 * sigma(i=1 -> 12) rand(-b,b)
+
+        # return np.random.rand(3)
+

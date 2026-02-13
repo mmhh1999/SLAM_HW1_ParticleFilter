@@ -16,8 +16,6 @@ class MapReader:
 
         self._occupancy_map = np.genfromtxt(src_path_map, skip_header=7)
         self._occupancy_map[self._occupancy_map < 0] = -1
-        # The raw data stores P(free) the probability a cell is freespace
-        # Convert to P(occupancy) by 1-P(free)
         self._occupancy_map[self._occupancy_map > 0] = 1 - self._occupancy_map[
             self._occupancy_map > 0]
         self._occupancy_map = np.flipud(self._occupancy_map)
@@ -31,6 +29,8 @@ class MapReader:
 
     def visualize_map(self):
         fig = plt.figure()
+        mng = plt.get_current_fig_manager()
+        mng.resize(*mng.window.maxsize())
         plt.ion()
         plt.imshow(self._occupancy_map, cmap='Greys')
         plt.axis([0, 800, 0, 800])

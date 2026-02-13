@@ -15,8 +15,10 @@ class Resampling:
     def __init__(self):
         """
         TODO : Initialize resampling process parameters here
+
         """
-        pass
+
+        
 
     def multinomial_sampler(self, X_bar):
         """
@@ -26,24 +28,7 @@ class Resampling:
         """
         TODO : Add your code here
         """
-        num_particles = X_bar.shape[0]
-        weights = X_bar[:, 3]
-        
-        # Normalize weights
-        weights_sum = np.sum(weights)
-        if weights_sum == 0:
-            weights_normalized = np.ones(num_particles) / num_particles
-        else:
-            weights_normalized = weights / weights_sum
-        
-        # Sample indices according to weights
-        indices = np.random.choice(num_particles, size=num_particles, 
-                                   replace=True, p=weights_normalized)
-        
-        # Resample particles
-        X_bar_resampled = X_bar[indices, :]
-        X_bar_resampled[:, 3] = 1.0 / num_particles
-        
+        X_bar_resampled =  np.zeros_like(X_bar)
         return X_bar_resampled
 
     def low_variance_sampler(self, X_bar):
@@ -54,33 +39,86 @@ class Resampling:
         """
         TODO : Add your code here
         """
-        num_particles = X_bar.shape[0]
-        X_bar_resampled = np.zeros_like(X_bar)
         
-        # Normalize weights
-        weights = X_bar[:, 3]
-        weights_sum = np.sum(weights)
-        if weights_sum == 0:
-            weights_normalized = np.ones(num_particles) / num_particles
-        else:
-            weights_normalized = weights / weights_sum
         
-        # Low variance resampling algorithm (Table 4.4)
-        r = np.random.uniform(0, 1.0 / num_particles)
-        c = weights_normalized[0]
+        # # print(np.shape(X_bar))
+        '''
+        weights = X_bar[:,3]
+        '''
+        
+        # # print("weight Shape = ")
+        # # print(np.size(weights))
+        
+        
+        X_bar_resampled =  list()
+        M = X_bar.shape[0]
+        X_bar[:,3] = X_bar[:,3] / np.sum(X_bar[:,3])
+        r = np.random.uniform(0,1.0/M)
+        # c = weightNorms[0]
+        c = X_bar[0,3]
         i = 0
+        for m in range(1,M+1):
+            u = r + (m-1)*1/M
+            while u > c:
+                i+=1
+                # c = c + weightNorms[i]
+                c = c + X_bar[i,3]
+            X_bar_resampled.append(X_bar[i])
+        X_bar_resampled = np.array(X_bar_resampled)
         
-        for m in range(num_particles):
-            U = r + m * (1.0 / num_particles)
-            while U > c:
-                i += 1
-                if i >= num_particles:
-                    i = num_particles - 1
-                    break
-                c += weights_normalized[i]
-            X_bar_resampled[m, :] = X_bar[i, :]
         
-        # Reset weights
-        X_bar_resampled[:, 3] = 1.0 / num_particles
+        # N = len(X)
+        # XNew = np.zeros(X.shape)
+
+        # k = 0
+        # sumWeights=0
+        # for i in range(N):
+        #     sumWeights += weights[i] #Normalization Step
+
+        # normWeights = weights*1.0/sumWeights
+        # r = random.uniform(0, 1.0/N)
+
+        # c = normWeights[0]
+        # i = 0
+        # for m in range(N):
+        #     u = r + m*(1.0/N)
+        #     while u > c:
+        #         i = i + 1
+        #         c = c + normWeights[i]
+        #     XNew[k] = X[i]
+        #     k=k+1
+        # return XNew
         
+
+        
+        # r = np.random.uniform(0, 1.0 / N)
+        # c = weights[0]
+        # i = 0
+        # for m in range(N):
+        #     u = r + m / N
+        #     while u > c:
+        #         i = i + 1
+        #         c = c + weights[i]
+        #     X_bar_resampled[m] = X_bar[i]    
+        #     # X_bar_resampled[m, 0:3] = X_bar[i, 0:3]
+        #     # X_bar_resampled[m, -1] = c
+
+        # X_bar_resampled = np.zeros_like(X_bar)
+        
+        # r = np.random.uniform(0, 1.0 / N)
+        # c = weights[0]
+        # i = 0
+        # for m in range(N):
+        #     u = r + m / N
+        #     while u > c:
+        #         if i == N - 1:
+        #             i = 0
+        #         else:
+        #             i = i + 1
+        #         c = c + weights[i]
+        #     X_bar_resampled[m, :] = X_bar[i, :]
+        
+        
+
+
         return X_bar_resampled
