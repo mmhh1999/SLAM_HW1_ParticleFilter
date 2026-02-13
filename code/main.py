@@ -3,7 +3,7 @@
     Initially written by Paloma Sodhi (psodhi@cs.cmu.edu), 2018
     Updated by Wei Dong (weidong@andrew.cmu.edu), 2021
 '''
-
+from tqdm import tqdm
 import argparse
 import numpy as np
 import sys, os
@@ -17,6 +17,8 @@ from matplotlib import pyplot as plt
 from matplotlib import figure as fig
 import time
 
+from multiprocessing import Pool
+from itertools import product
 
 def visualize_map(occupancy_map):
     fig = plt.figure()
@@ -24,22 +26,16 @@ def visualize_map(occupancy_map):
     plt.ion()
     plt.imshow(occupancy_map, cmap='Greys')
     plt.axis([0, 800, 0, 800])
-    return occupancy_map  # Return map for reuse
 
 
-def visualize_timestep(X_bar, tstep, output_path, occupancy_map=None):
-    # Redraw map background each frame to prevent background loss
-    if occupancy_map is not None:
-        plt.clf()  # Clear figure
-        plt.imshow(occupancy_map, cmap='Greys')
-        plt.axis([0, 800, 0, 800])
-    
+def visualize_timestep(X_bar, tstep, output_path):
     x_locs = X_bar[:, 0] / 10.0
     y_locs = X_bar[:, 1] / 10.0
-    plt.scatter(x_locs, y_locs, c='r', marker='o', s=5)
+    scat = plt.scatter(x_locs, y_locs, c='r', marker='o',s=10)
     plt.savefig('{}/{:04d}.png'.format(output_path, tstep))
-    plt.pause(0.00001)
 
+    plt.pause(0.00001)
+    scat.remove()
 
 def init_particles_random(num_particles, occupancy_map):
 
@@ -64,12 +60,34 @@ def init_particles_freespace(num_particles, occupancy_map):
     TODO : Add your code here
     This version converges faster than init_particles_random
     """
-    X_bar_init = np.zeros((num_particles, 4))
+    # initialize weights for particles (1/num particle)
+    w0_vals = np.ones((num_particles, 1), dtype=np.float64)
+    w0_vals = w0_vals/num_particles
 
+    x0_vals = []
+    y0_vals = []
+  
+    while len(x0_vals) < num_particles:
+        y0_rand = np.random.uniform(0, 7500, (num_particles, 1))
+        x0_rand = np.random.uniform(3000, 7000, (num_particles, 1))
+        theta0_vals = np.random.uniform(-np.pi,np.pi, (num_particles, 1))
+        x_map = np.round(x0_rand/10.0).astype(np.int64)
+        y_map = np.round(y0_rand/10.0).astype(np.int64)
+        for i in range(len(x_map)):
+            if np.abs(occupancy_map[y_map[i], x_map[i]]) == 0:
+                if len(x0_vals) < num_particles:
+                    x0_vals.append(x0_rand[i])    
+                    y0_vals.append(y0_rand[i])
+
+    x0_vals = np.array(x0_vals)
+    y0_vals = np.array(y0_vals)
+
+    X_bar_init = np.hstack((x0_vals, y0_vals, theta0_vals, w0_vals))
     return X_bar_init
 
 
 if __name__ == '__main__':
+    start_time = time.time()
     """
     Description of variables used
     u_t0 : particle state odometry reading [x, y, theta] at time (t-1) [odometry_frame]
@@ -82,12 +100,16 @@ if __name__ == '__main__':
     """
     Initialize Parameters
     """
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_to_map', default='../data/map/wean.dat')
-    parser.add_argument('--path_to_log', default='../data/log/robotdata1.log')
+    parser.add_argument('--path_to_map', default=r'd:\000-学习\010-课程资料\014-CMU\S4_26Spring\16833 Robot Localization and Mapping\SLAM_HW1_ParticleFilter\data\map\wean.dat')
+    parser.add_argument('--path_to_log', default=r'd:\000-学习\010-课程资料\014-CMU\S4_26Spring\16833 Robot Localization and Mapping\SLAM_HW1_ParticleFilter\data\log\robotdata1.log')
     parser.add_argument('--output', default='results')
     parser.add_argument('--num_particles', default=500, type=int)
     parser.add_argument('--visualize', action='store_true')
+    parser.add_argument('--ray', action='store_true')
+    parser.add_argument('--belief', action='store_true')
+    
     args = parser.parse_args()
 
     src_path_map = args.path_to_map
@@ -103,8 +125,11 @@ if __name__ == '__main__':
     resampler = Resampling()
 
     num_particles = args.num_particles
-    X_bar = init_particles_random(num_particles, occupancy_map)
-    # X_bar = init_particles_freespace(num_particles, occupancy_map)
+    # X_bar = init_particles_random(num_particles, occupancy_map)
+    X_bar = init_particles_freespace(num_particles, occupancy_map)
+    if num_particles == 1:
+        X_bar = np.array([[4055, 4005, np.pi, 1],
+                          [4055, 4005, np.pi, 1]])
     """
     Monte Carlo Localization Algorithm : Main Loop
     """
@@ -125,17 +150,14 @@ if __name__ == '__main__':
         odometry_robot = meas_vals[0:3]
         time_stamp = meas_vals[-1]
 
-        # ignore pure odometry measurements for (faster debugging)
-        # if ((time_stamp <= 0.0) | (meas_type == "O")):
-        #     continue
-
         if (meas_type == "L"):
             # [x, y, theta] coordinates of laser in odometry frame
             odometry_laser = meas_vals[3:6]
             # 180 range measurement values from single laser scan
             ranges = meas_vals[6:-1]
 
-        print("Processing time step {} at time {}s".format(
+        if time_idx % 20 == 0:
+            print("Processing time step {} at time {}s".format(
             time_idx, time_stamp))
 
         if first_time_idx:
@@ -148,6 +170,7 @@ if __name__ == '__main__':
 
         # Note: this formulation is intuitive but not vectorized; looping in python is SLOW.
         # Vectorized version will receive a bonus. i.e., the functions take all particles as the input and process them in a vector.
+
         for m in range(0, num_particles):
             """
             MOTION MODEL
@@ -155,13 +178,26 @@ if __name__ == '__main__':
             x_t0 = X_bar[m, 0:3]
             x_t1 = motion_model.update(u_t0, u_t1, x_t0)
 
+            xInt = int(x_t1[0]/10.0)
+            yInt = int(x_t1[1]/10.0)
+
+            if occupancy_map[yInt, xInt] == 1.0 :
+                w_t = 0
+                probs = 0
+                X_bar_new[m, :] = np.hstack((x_t1, w_t))
+                continue
+
             """
             SENSOR MODEL
             """
             if (meas_type == "L"):
                 z_t = ranges
-                w_t = sensor_model.beam_range_finder_model(z_t, x_t1)
+
+                w_t, probs, laserX, laserY = sensor_model.beam_range_finder_model(z_t, x_t1)
                 X_bar_new[m, :] = np.hstack((x_t1, w_t))
+                if args.visualize and num_particles == 1:
+                    visualize_timestep(X_bar, time_idx, args.output)
+
             else:
                 X_bar_new[m, :] = np.hstack((x_t1, X_bar[m, 3]))
 
@@ -171,7 +207,11 @@ if __name__ == '__main__':
         """
         RESAMPLING
         """
-        X_bar = resampler.low_variance_sampler(X_bar)
-
-        if args.visualize:
-            visualize_timestep(X_bar, time_idx, args.output, occupancy_map)
+        if (meas_type == "L"):
+            X_bar = resampler.low_variance_sampler(X_bar)
+        
+        if args.visualize and num_particles > 1:
+            visualize_timestep(X_bar, time_idx, args.output)
+        
+            
+    print("Program time: %s seconds" % (time.time() - start_time))
