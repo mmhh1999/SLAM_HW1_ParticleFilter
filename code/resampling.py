@@ -40,85 +40,28 @@ class Resampling:
         TODO : Add your code here
         """
         
+        # Number of particles
+        num_particles = X_bar.shape[0]
         
-        # # print(np.shape(X_bar))
-        '''
-        weights = X_bar[:,3]
-        '''
+        # Normalize weights
+        total_weight = np.sum(X_bar[:, 3])
+        if total_weight > 0:
+            X_bar[:, 3] /= total_weight
+        else:
+            # If all weights are zero, uniform resampling
+            X_bar[:, 3] = 1.0 / num_particles
         
-        # # print("weight Shape = ")
-        # # print(np.size(weights))
+        # Low variance resampling
+        resampled_particles = []
+        r = np.random.uniform(0, 1.0 / num_particles)
+        cumulative_weight = X_bar[0, 3]
+        index = 0
         
+        for particle_idx in range(1, num_particles + 1):
+            u = r + (particle_idx - 1) / num_particles
+            while u > cumulative_weight:
+                index += 1
+                cumulative_weight += X_bar[index, 3]
+            resampled_particles.append(X_bar[index])
         
-        X_bar_resampled =  list()
-        M = X_bar.shape[0]
-        X_bar[:,3] = X_bar[:,3] / np.sum(X_bar[:,3])
-        r = np.random.uniform(0,1.0/M)
-        # c = weightNorms[0]
-        c = X_bar[0,3]
-        i = 0
-        for m in range(1,M+1):
-            u = r + (m-1)*1/M
-            while u > c:
-                i+=1
-                # c = c + weightNorms[i]
-                c = c + X_bar[i,3]
-            X_bar_resampled.append(X_bar[i])
-        X_bar_resampled = np.array(X_bar_resampled)
-        
-        
-        # N = len(X)
-        # XNew = np.zeros(X.shape)
-
-        # k = 0
-        # sumWeights=0
-        # for i in range(N):
-        #     sumWeights += weights[i] #Normalization Step
-
-        # normWeights = weights*1.0/sumWeights
-        # r = random.uniform(0, 1.0/N)
-
-        # c = normWeights[0]
-        # i = 0
-        # for m in range(N):
-        #     u = r + m*(1.0/N)
-        #     while u > c:
-        #         i = i + 1
-        #         c = c + normWeights[i]
-        #     XNew[k] = X[i]
-        #     k=k+1
-        # return XNew
-        
-
-        
-        # r = np.random.uniform(0, 1.0 / N)
-        # c = weights[0]
-        # i = 0
-        # for m in range(N):
-        #     u = r + m / N
-        #     while u > c:
-        #         i = i + 1
-        #         c = c + weights[i]
-        #     X_bar_resampled[m] = X_bar[i]    
-        #     # X_bar_resampled[m, 0:3] = X_bar[i, 0:3]
-        #     # X_bar_resampled[m, -1] = c
-
-        # X_bar_resampled = np.zeros_like(X_bar)
-        
-        # r = np.random.uniform(0, 1.0 / N)
-        # c = weights[0]
-        # i = 0
-        # for m in range(N):
-        #     u = r + m / N
-        #     while u > c:
-        #         if i == N - 1:
-        #             i = 0
-        #         else:
-        #             i = i + 1
-        #         c = c + weights[i]
-        #     X_bar_resampled[m, :] = X_bar[i, :]
-        
-        
-
-
-        return X_bar_resampled
+        return np.array(resampled_particles)

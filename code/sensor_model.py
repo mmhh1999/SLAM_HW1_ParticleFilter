@@ -307,60 +307,25 @@ class SensorModel:
         # return self.beamsRange, self.laserX, self.laserY
 
     def beam_range_finder_model(self, z_t1_arr, x_t1):
-        # print("\n ---------\nBEAM RANGE FINDER MODEL CALLED\n ---------\n")
-
         """
         param[in] z_t1_arr : laser range readings [array of 180 values] at time t
         param[in] x_t1 : particle state belief [x, y, theta] at time t [world_frame]
         param[out] prob_zt1 : likelihood of a range scan zt1 at time t
         """
-        """
-        TODO : Add your code here
-        """
-        # q = 1
-
-        '''
-        q = 0
-        # zt_star,self.laserX,self.laserY = rayCast(x_t1,resolution,nLaser,self.OccMap)
-        
-        # for i in range(nLaser):
-
-        #     pHit   = pHitFun(z_t1_arr[i],zt_star[i],self._sigma_hit)
-        #     pShort = pShortFun(z_t1_arr[i],zt_star[i],self._lambda_short)
-        #     pMax   = pMaxFun(z_t1_arr[i],self._z_max)
-        #     pRand  = pRandFun(z_t1_arr[i],self._z_max)
-
-        #     p = self._z_hit*pHit + self._z_short*pShort + self._z_max*pMax + self._z_rand*pRand
-        
-        #     q = q*p
-            
-        #     if q==0:
-        #         q = 1e-20
-        # return q
-        '''
-        # q = 1
-        q = 0
-
+        # Subsample the laser readings to match the number of beams
         step = int(180 / self.nLaser)
         z_reading = [z_t1_arr[n] for n in range(0, 180, step)]
-        # print("measure----")
-        # print(z_reading)
+
+        # Perform ray casting to get expected ranges and hit points
         zt_star, laserX, laserY = self.rayCast(x_t1)
-        # print("my cast----")
-        # print(zt_star)
-        '''
-        # diff = z_reading - zt_star
-        # print("difference = ")
-        # print(diff)
-        '''
-        # print(np.size(z_reading))
+
+        # Compute probabilities for each beam
         probs = np.zeros(self.nLaser)
+        log_likelihood_sum = 0.0
         for i in range(self.nLaser):
-            probs[i], pHit, pShort, pMax, pRand = self.getProbability(zt_star[i], z_reading[i])
-            q += np.log(probs[i])
+            probs[i], _, _, _, _ = self.getProbability(zt_star[i], z_reading[i])
+            log_likelihood_sum += np.log(probs[i])
 
-        q = self.nLaser / np.abs(q)
+        # Compute the overall likelihood
+        q = self.nLaser / np.abs(log_likelihood_sum)
         return q, probs, laserX, laserY
-
-        # prob_zt1 = 1.0
-        # return prob_zt1

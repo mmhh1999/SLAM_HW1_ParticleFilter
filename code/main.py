@@ -102,8 +102,8 @@ if __name__ == '__main__':
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_to_map', default='../data/map/wean.dat')
-    parser.add_argument('--path_to_log', default='../data/log/robotdata2.log')
+    parser.add_argument('--path_to_map', default=r'd:\000-学习\010-课程资料\014-CMU\S4_26Spring\16833 Robot Localization and Mapping\SLAM_HW1_ParticleFilter\data\map\wean.dat')
+    parser.add_argument('--path_to_log', default=r'd:\000-学习\010-课程资料\014-CMU\S4_26Spring\16833 Robot Localization and Mapping\SLAM_HW1_ParticleFilter\data\log\robotdata1.log')
     parser.add_argument('--output', default='results')
     parser.add_argument('--num_particles', default=500, type=int)
     parser.add_argument('--visualize', action='store_true')
