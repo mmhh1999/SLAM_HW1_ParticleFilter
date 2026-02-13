@@ -25,10 +25,12 @@ class MotionModel:
         alpha3: translation noise from translation
         alpha4: translation noise from rotation
         """
-        self._alpha1 = 0.001
-        self._alpha2 = 0.001
-        self._alpha3 = 0.2
-        self._alpha4 = 0.001
+        self._alpha1 = 0
+        self._alpha2 = 0
+        self._alpha3 = 0
+        self._alpha4 = 0
+        self.odom2world = 0 #-np.pi/2  # Rotation from odometry frame to world frame (90 degrees)
+        self.no_noise = True  # Set to True to disable noise for debugging and testing
 
     def _normalize_angle(self, angle):
         """Normalize angle to [-pi, pi]"""
@@ -65,17 +67,20 @@ class MotionModel:
         delta_rot2 = self._normalize_angle(theta_bar1 - theta_bar0 - delta_rot1)
         
         # Step 2: Add Gaussian noise
-        delta_rot1_var = self._alpha1 * delta_rot1**2 + self._alpha2 * delta_trans**2
-        delta_trans_var = self._alpha3 * delta_trans**2 + self._alpha4 * (delta_rot1**2 + delta_rot2**2)
-        delta_rot2_var = self._alpha1 * delta_rot2**2 + self._alpha2 * delta_trans**2
-        
-        delta_rot1_hat = delta_rot1 - np.random.normal(0, np.sqrt(max(delta_rot1_var, 1e-10)))
-        delta_trans_hat = delta_trans - np.random.normal(0, np.sqrt(max(delta_trans_var, 1e-10)))
-        delta_rot2_hat = delta_rot2 - np.random.normal(0, np.sqrt(max(delta_rot2_var, 1e-10)))
+        if self.no_noise:
+            delta_rot1_hat, delta_trans_hat, delta_rot2_hat = delta_rot1, delta_trans, delta_rot2
+        else:
+            delta_rot1_var = self._alpha1 * delta_rot1**2 + self._alpha2 * delta_trans**2
+            delta_trans_var = self._alpha3 * delta_trans**2 + self._alpha4 * (delta_rot1**2 + delta_rot2**2)
+            delta_rot2_var = self._alpha1 * delta_rot2**2 + self._alpha2 * delta_trans**2
+            
+            delta_rot1_hat = delta_rot1 - np.random.normal(0, np.sqrt(max(delta_rot1_var, 1e-10)))
+            delta_trans_hat = delta_trans - np.random.normal(0, np.sqrt(max(delta_trans_var, 1e-10)))
+            delta_rot2_hat = delta_rot2 - np.random.normal(0, np.sqrt(max(delta_rot2_var, 1e-10)))
         
         # Step 3: Apply noisy motion to particle state
-        x1 = x0 + delta_trans_hat * np.cos(theta0 + delta_rot1_hat)
-        y1 = y0 + delta_trans_hat * np.sin(theta0 + delta_rot1_hat)
+        x1 = x0 + delta_trans_hat * np.cos(theta0 + delta_rot1_hat + self.odom2world)
+        y1 = y0 + delta_trans_hat * np.sin(theta0 + delta_rot1_hat + self.odom2world)
         theta1 = self._normalize_angle(theta0 + delta_rot1_hat + delta_rot2_hat)
         
         return np.array([x1, y1, theta1])
