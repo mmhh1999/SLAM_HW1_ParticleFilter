@@ -53,7 +53,7 @@ def init_particles_random(num_particles, occupancy_map):
     return X_bar_init
 
 
-def init_particles_freespace(num_particles, occupancy_map):
+def init_particles_freespace(num_particles, occupancy_map, debug=False):
 
     # initialize [x, y, theta] positions in world_frame for all particles
     """
@@ -74,7 +74,7 @@ def init_particles_freespace(num_particles, occupancy_map):
         x_map = np.round(x0_rand/10.0).astype(np.int64)
         y_map = np.round(y0_rand/10.0).astype(np.int64)
         for i in range(len(x_map)):
-            if np.abs(occupancy_map[y_map[i], x_map[i]]) == 0:
+            if np.abs(occupancy_map[y_map[i], x_map[i]]) <= 0.1:    # Tuned
                 if len(x0_vals) < num_particles:
                     x0_vals.append(x0_rand[i])    
                     y0_vals.append(y0_rand[i])
@@ -83,6 +83,43 @@ def init_particles_freespace(num_particles, occupancy_map):
     y0_vals = np.array(y0_vals)
 
     X_bar_init = np.hstack((x0_vals, y0_vals, theta0_vals, w0_vals))
+
+    # ---------------- Debug ROI initialization ----------------
+    if debug:
+        # ROI in world frame (cm)
+        xmin, xmax = 3000.0, 5000.0
+        ymin, ymax = 2000.0, 4000.0
+
+        mask = (
+            (X_bar_init[:, 0] >= xmin) & (X_bar_init[:, 0] <= xmax) &
+            (X_bar_init[:, 1] >= ymin) & (X_bar_init[:, 1] <= ymax)
+        )
+
+        X_roi = X_bar_init[mask]
+
+        print(f"[DEBUG] Particles inside ROI: {X_roi.shape[0]} / {num_particles}")
+
+        if X_roi.shape[0] == 0:
+            print("[DEBUG] No particles inside ROI. Using original initialization.")
+            return X_bar_init
+        else:
+            idx = np.random.choice(
+                X_roi.shape[0],
+                size=num_particles,
+                replace=(X_roi.shape[0] < num_particles)
+            )
+
+            X_bar_debug = X_roi[idx]
+            X_bar_debug[:, 3] = 1.0 / num_particles  # normalize weights
+
+            print("[DEBUG] Initialized particles in ROI "
+                  "x=[3000,5000], y=[2000,4000]")
+
+            return X_bar_debug
+    # -----------------------------------------------------------
+
+
+
     return X_bar_init
 
 
@@ -102,13 +139,14 @@ if __name__ == '__main__':
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_to_map', default=r'd:\000-学习\010-课程资料\014-CMU\S4_26Spring\16833 Robot Localization and Mapping\SLAM_HW1_ParticleFilter\data\map\wean.dat')
-    parser.add_argument('--path_to_log', default=r'd:\000-学习\010-课程资料\014-CMU\S4_26Spring\16833 Robot Localization and Mapping\SLAM_HW1_ParticleFilter\data\log\robotdata1.log')
+    parser.add_argument('--path_to_map', default=r'C:\Users\12527\Desktop\SLAM_HW1_ParticleFilter\data\map\wean.dat')
+    parser.add_argument('--path_to_log', default=r'C:\Users\12527\Desktop\SLAM_HW1_ParticleFilter\data\log\robotdata1.log')
     parser.add_argument('--output', default='results')
     parser.add_argument('--num_particles', default=500, type=int)
     parser.add_argument('--visualize', action='store_true')
     parser.add_argument('--ray', action='store_true')
     parser.add_argument('--belief', action='store_true')
+    parser.add_argument('--debug', action='store_true') # init particles only in a fixed ROI
     
     args = parser.parse_args()
 
@@ -126,7 +164,7 @@ if __name__ == '__main__':
 
     num_particles = args.num_particles
     # X_bar = init_particles_random(num_particles, occupancy_map)
-    X_bar = init_particles_freespace(num_particles, occupancy_map)
+    X_bar = init_particles_freespace(num_particles, occupancy_map, debug=args.debug)
     if num_particles == 1:
         X_bar = np.array([[4055, 4005, np.pi, 1],
                           [4055, 4005, np.pi, 1]])
@@ -163,6 +201,10 @@ if __name__ == '__main__':
         if first_time_idx:
             u_t0 = odometry_robot
             first_time_idx = False
+            continue
+
+        # Skip odometry-only updates to speed up (recommended in debug/tuning)
+        if meas_type == "O" and args.debug:
             continue
 
         X_bar_new = np.zeros((num_particles, 4), dtype=np.float64)
@@ -210,7 +252,7 @@ if __name__ == '__main__':
         if (meas_type == "L"):
             X_bar = resampler.low_variance_sampler(X_bar)
         
-        if args.visualize and num_particles > 1:
+        if args.visualize and num_particles > 1 and (time_idx % 40 == 0):  # For debug
             visualize_timestep(X_bar, time_idx, args.output)
         
             

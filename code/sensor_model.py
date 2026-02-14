@@ -169,142 +169,209 @@ class SensorModel:
         p /= (self._z_hit + self._z_short + self._z_max + self._z_rand)
         return p, pHit, pShort, pMax, pRand
 
+    # def rayCast(self, x_t1):
+
+    #     '''
+    #      vectorizing (mask) ---
+    #     '''
+    #     # beamsRange = np.zeros(self.nLaser)
+    #     # laserX = np.zeros(self.nLaser)
+    #     # laserY = np.zeros(self.nLaser)
+    #     # angs   = np.zeros(self.nLaser)
+    #     # L = 25
+
+    #     # xc = x_t1[0]
+    #     # yc = x_t1[1]
+    #     # myPhi = x_t1[2]
+    #     # ang = myPhi - np.pi/2
+    #     # ang =self.WrapToPi(ang)
+    #     # offSetX = xc + L* np.cos(ang)
+    #     # offSetY = yc + L* np.sin(ang)
+
+    #     # angStep = np.pi/self.nLaser
+    #     # r = np.linspace(0,self.laserMax,500)
+
+    #     # for i in range(self.nLaser):
+
+    #     #     ang += angStep*i
+    #     #     ang = self.WrapToPi(ang)
+    #     #     # casting rays
+    #     #     x = offSetX + r * np.cos(ang)
+    #     #     y = offSetY + r * np.sin(ang)
+
+    #     #     xInt = np.floor(x/self.resolution).astype(int)
+    #     #     yInt = np.floor(y/self.resolution).astype(int)
+
+    #     #     # mask = np.zeros_like(xInt).astype(bool)
+    #     #     # mask1= np.zeros_like(xInt).astype(bool)
+    #     #     # mask1[(xInt < 800) & (xInt>=0) & (yInt>=0) & (yInt < 800)] == True
+    #     #     # print("x",xInt[mask1].shape,yInt[mask1].shape)
+    #     #     # print("asdfsaf",self.OccMap[yInt[mask1],xInt[mask1]])
+
+    #     #     xWithin = np.argwhere(xInt<800)
+    #     #     yWithin = np.argwhere(yInt<800)
+    #     #     within = np.intersect1d(xWithin,yWithin)
+    #     #     hitInd = np.
+
+    #     #     ii = 0
+    #     #     for xx, yy in zip(xInt[mask1], yInt[mask1]):
+    #     #         if((np.abs(self.OccMap[yInt[xx],xInt[yy]]) > 0.35)):
+    #     #             idx = ii 
+    #     #             break
+    #     #         ii+=1
+
+    #     #     idx = np.argwhere(mask1==True)[ii]
+    #     #     mask[(np.abs(self.OccMap[yInt[mask1],xInt[mask1]]) > 0.35)] == True
+    #     #     mask[((xInt < 800) & (yInt < 800)) & (np.abs(self.OccMap[yInt,xInt]) > 0.35)] == True
+    #     #     laserX[idx] = x[idx]
+    #     #     laserY[idx] = y[idx]
+
+    #     #     beamsRange = r[idx]
+
+    #     ''' 
+    #     normal looping -----
+    #     '''
+
+    #     beamsRange = np.zeros(self.nLaser)
+    #     laserX = np.zeros(self.nLaser)
+    #     laserY = np.zeros(self.nLaser)
+    #     angs = np.zeros(self.nLaser)
+    #     L = 25
+
+    #     xc = x_t1[0]
+    #     yc = x_t1[1]
+    #     myPhi = x_t1[2]
+    #     ang = myPhi - np.pi / 2
+    #     ang = self.WrapToPi(ang)
+    #     offSetX = xc + L * np.cos(ang)
+    #     offSetY = yc + L * np.sin(ang)
+
+    #     angStep = np.pi / self.nLaser
+
+    #     '''
+    #     set ray step size
+    #     '''
+    #     r = np.linspace(0, self.laserMax, 800)
+
+    #     for i in range(self.nLaser):
+
+    #         ang += angStep
+    #         # print(ang*180/np.pi)
+    #         ang = self.WrapToPi(ang)
+    #         # print("angle after wrapped: ",ang*180/np.pi)
+    #         # print("current angle:", ang*180/np.pi)
+    #         # for idx, rs in enumerate(r):
+    #         for rs in r:
+
+    #             x = offSetX + rs * np.cos(ang)
+    #             y = offSetY + rs * np.sin(ang)
+
+    #             xInt = np.floor(x / self.resolution).astype(int)
+    #             yInt = np.floor(y / self.resolution).astype(int)
+
+    #             if xInt < 800 and yInt < 800 and np.abs(self.OccMap[yInt, xInt]) > 0.35:
+    #                 beamsRange[i] = rs
+    #                 phi = np.arctan2((offSetY - yInt), (offSetX - xInt))  # phase
+    #                 angs[i] = ang
+    #                 laserX[i] = xInt
+    #                 laserY[i] = yInt
+    #                 break
+    #                 # print(x,",",y)
+    #     # print(np.abs(angs[0]*180/np.pi-angs[-1]*180/np.pi))
+
+    #     # print(beamsRange)
+
+    #     return beamsRange, laserX, laserY
+
+    #     """ Test Method """
+
+    #     # L = 25
+    #     #
+    #     # ang = np.linspace(x_t1[2] - np.pi / 2, x_t1[2] + np.pi / 2, 180)[:, np.newaxis]
+    #     # r = np.linspace(0, self.laserMax, 200)[np.newaxis, :]
+    #     #
+    #     # x = x_t1[0] + (r + L) * np.cos(ang)
+    #     # y = x_t1[1] + (r + L) * np.sin(ang)
+    #     #
+    #     # xInt = np.floor(x / self.resolution).astype(int)
+    #     # yInt = np.floor(y / self.resolution).astype(int)
+    #     #
+    #     # for i in range(self.nLaser):
+    #     #     for j in range(r.shape[1]):
+    #     #         if xInt[i][j] < 800 and yInt[i][j] < 800 and np.abs(self.OccMap[yInt[i][j], xInt[i][j]]) > 0.35:
+    #     #             self.laserX[i] = xInt[i][j]
+    #     #             self.laserY[i] = yInt[i][j]
+    #     #             self.beamsRange[i] = r[0][j]
+    #     #             break
+    #     #
+    #     # return self.beamsRange, self.laserX, self.laserY
+    
     def rayCast(self, x_t1):
+        """
+        Ray casting for a single particle pose.
 
-        '''
-         vectorizing (mask) ---
-        '''
-        # beamsRange = np.zeros(self.nLaser)
-        # laserX = np.zeros(self.nLaser)
-        # laserY = np.zeros(self.nLaser)
-        # angs   = np.zeros(self.nLaser)
-        # L = 25
+        Input:
+            x_t1 : [x, y, theta] in world frame (cm, rad)
+        Output:
+            beamsRange : expected ranges (z*) for each beam
+            laserX, laserY : grid coordinates of first hit cell
 
-        # xc = x_t1[0]
-        # yc = x_t1[1]
-        # myPhi = x_t1[2]
-        # ang = myPhi - np.pi/2
-        # ang =self.WrapToPi(ang)
-        # offSetX = xc + L* np.cos(ang)
-        # offSetY = yc + L* np.sin(ang)
+        For each beam, we sample points along the ray direction,
+        convert to map indices, and return the first occupied cell
+        (|OccMap| > 0.35). If no hit is found, the range remains 0.
 
-        # angStep = np.pi/self.nLaser
-        # r = np.linspace(0,self.laserMax,500)
-
-        # for i in range(self.nLaser):
-
-        #     ang += angStep*i
-        #     ang = self.WrapToPi(ang)
-        #     # casting rays
-        #     x = offSetX + r * np.cos(ang)
-        #     y = offSetY + r * np.sin(ang)
-
-        #     xInt = np.floor(x/self.resolution).astype(int)
-        #     yInt = np.floor(y/self.resolution).astype(int)
-
-        #     # mask = np.zeros_like(xInt).astype(bool)
-        #     # mask1= np.zeros_like(xInt).astype(bool)
-        #     # mask1[(xInt < 800) & (xInt>=0) & (yInt>=0) & (yInt < 800)] == True
-        #     # print("x",xInt[mask1].shape,yInt[mask1].shape)
-        #     # print("asdfsaf",self.OccMap[yInt[mask1],xInt[mask1]])
-
-        #     xWithin = np.argwhere(xInt<800)
-        #     yWithin = np.argwhere(yInt<800)
-        #     within = np.intersect1d(xWithin,yWithin)
-        #     hitInd = np.
-
-        #     ii = 0
-        #     for xx, yy in zip(xInt[mask1], yInt[mask1]):
-        #         if((np.abs(self.OccMap[yInt[xx],xInt[yy]]) > 0.35)):
-        #             idx = ii 
-        #             break
-        #         ii+=1
-
-        #     idx = np.argwhere(mask1==True)[ii]
-        #     mask[(np.abs(self.OccMap[yInt[mask1],xInt[mask1]]) > 0.35)] == True
-        #     mask[((xInt < 800) & (yInt < 800)) & (np.abs(self.OccMap[yInt,xInt]) > 0.35)] == True
-        #     laserX[idx] = x[idx]
-        #     laserY[idx] = y[idx]
-
-        #     beamsRange = r[idx]
-
-        ''' 
-        normal looping -----
-        '''
-
+        This version vectorizes distance sampling using NumPy
+        to reduce inner Python loops and improve runtime.
+        """
         beamsRange = np.zeros(self.nLaser)
         laserX = np.zeros(self.nLaser)
         laserY = np.zeros(self.nLaser)
-        angs = np.zeros(self.nLaser)
-        L = 25
 
-        xc = x_t1[0]
-        yc = x_t1[1]
-        myPhi = x_t1[2]
-        ang = myPhi - np.pi / 2
-        ang = self.WrapToPi(ang)
+        L = 25
+        xc, yc, myPhi = x_t1[0], x_t1[1], x_t1[2]
+
+        ang = self.WrapToPi(myPhi - np.pi / 2)
         offSetX = xc + L * np.cos(ang)
         offSetY = yc + L * np.sin(ang)
 
         angStep = np.pi / self.nLaser
 
-        '''
-        set ray step size
-        '''
         r = np.linspace(0, self.laserMax, 800)
 
+        H, W = self.OccMap.shape
+
         for i in range(self.nLaser):
+            ang = self.WrapToPi(ang + angStep)
+            c, s = np.cos(ang), np.sin(ang)
 
-            ang += angStep
-            # print(ang*180/np.pi)
-            ang = self.WrapToPi(ang)
-            # print("angle after wrapped: ",ang*180/np.pi)
-            # print("current angle:", ang*180/np.pi)
-            # for idx, rs in enumerate(r):
-            for rs in r:
+            x = offSetX + r * c
+            y = offSetY + r * s
 
-                x = offSetX + rs * np.cos(ang)
-                y = offSetY + rs * np.sin(ang)
+            xInt = np.floor(x / self.resolution).astype(np.int32)
+            yInt = np.floor(y / self.resolution).astype(np.int32)
 
-                xInt = np.floor(x / self.resolution).astype(int)
-                yInt = np.floor(y / self.resolution).astype(int)
+            valid = (xInt >= 0) & (xInt < W) & (yInt >= 0) & (yInt < H)
+            if not np.any(valid):
+                # beamsRange[i] = self.laserMax
+                continue
 
-                if xInt < 800 and yInt < 800 and np.abs(self.OccMap[yInt, xInt]) > 0.35:
-                    beamsRange[i] = rs
-                    phi = np.arctan2((offSetY - yInt), (offSetX - xInt))  # phase
-                    angs[i] = ang
-                    laserX[i] = xInt
-                    laserY[i] = yInt
-                    break
-                    # print(x,",",y)
-        # print(np.abs(angs[0]*180/np.pi-angs[-1]*180/np.pi))
+            xIntv = xInt[valid]
+            yIntv = yInt[valid]
+            rv = r[valid]
 
-        # print(beamsRange)
+            hit = np.abs(self.OccMap[yIntv, xIntv]) > 0.35
+            if np.any(hit):
+                # j = np.argmax(hit)  # first True
+                j = np.flatnonzero(hit)[0]  # first hit
+                beamsRange[i] = rv[j]
+                laserX[i] = xIntv[j]
+                laserY[i] = yIntv[j]
+            # else:
+            #     beamsRange[i] = self.laserMax
 
         return beamsRange, laserX, laserY
 
-        """ Test Method """
 
-        # L = 25
-        #
-        # ang = np.linspace(x_t1[2] - np.pi / 2, x_t1[2] + np.pi / 2, 180)[:, np.newaxis]
-        # r = np.linspace(0, self.laserMax, 200)[np.newaxis, :]
-        #
-        # x = x_t1[0] + (r + L) * np.cos(ang)
-        # y = x_t1[1] + (r + L) * np.sin(ang)
-        #
-        # xInt = np.floor(x / self.resolution).astype(int)
-        # yInt = np.floor(y / self.resolution).astype(int)
-        #
-        # for i in range(self.nLaser):
-        #     for j in range(r.shape[1]):
-        #         if xInt[i][j] < 800 and yInt[i][j] < 800 and np.abs(self.OccMap[yInt[i][j], xInt[i][j]]) > 0.35:
-        #             self.laserX[i] = xInt[i][j]
-        #             self.laserY[i] = yInt[i][j]
-        #             self.beamsRange[i] = r[0][j]
-        #             break
-        #
-        # return self.beamsRange, self.laserX, self.laserY
 
     def beam_range_finder_model(self, z_t1_arr, x_t1):
         """
@@ -324,6 +391,7 @@ class SensorModel:
         log_likelihood_sum = 0.0
         for i in range(self.nLaser):
             probs[i], _, _, _, _ = self.getProbability(zt_star[i], z_reading[i])
+            probs[i] = max(probs[i], 1e-12)  # Avoid zero probabilities
             log_likelihood_sum += np.log(probs[i])
 
         # Compute the overall likelihood
