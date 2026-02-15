@@ -84,39 +84,39 @@ def init_particles_freespace(num_particles, occupancy_map, debug=False):
 
     X_bar_init = np.hstack((x0_vals, y0_vals, theta0_vals, w0_vals))
 
-    # ---------------- Debug ROI initialization ----------------
-    if debug:
-        # ROI in world frame (cm)
-        xmin, xmax = 3000.0, 5000.0
-        ymin, ymax = 2000.0, 4000.0
+    # # ---------------- Debug ROI initialization ----------------
+    # if debug:
+    #     # ROI in world frame (cm)
+    #     xmin, xmax = 3000.0, 5000.0
+    #     ymin, ymax = 2000.0, 4000.0
 
-        mask = (
-            (X_bar_init[:, 0] >= xmin) & (X_bar_init[:, 0] <= xmax) &
-            (X_bar_init[:, 1] >= ymin) & (X_bar_init[:, 1] <= ymax)
-        )
+    #     mask = (
+    #         (X_bar_init[:, 0] >= xmin) & (X_bar_init[:, 0] <= xmax) &
+    #         (X_bar_init[:, 1] >= ymin) & (X_bar_init[:, 1] <= ymax)
+    #     )
 
-        X_roi = X_bar_init[mask]
+    #     X_roi = X_bar_init[mask]
 
-        print(f"[DEBUG] Particles inside ROI: {X_roi.shape[0]} / {num_particles}")
+    #     print(f"[DEBUG] Particles inside ROI: {X_roi.shape[0]} / {num_particles}")
 
-        if X_roi.shape[0] == 0:
-            print("[DEBUG] No particles inside ROI. Using original initialization.")
-            return X_bar_init
-        else:
-            idx = np.random.choice(
-                X_roi.shape[0],
-                size=num_particles,
-                replace=(X_roi.shape[0] < num_particles)
-            )
+    #     if X_roi.shape[0] == 0:
+    #         print("[DEBUG] No particles inside ROI. Using original initialization.")
+    #         return X_bar_init
+    #     else:
+    #         idx = np.random.choice(
+    #             X_roi.shape[0],
+    #             size=num_particles,
+    #             replace=(X_roi.shape[0] < num_particles)
+    #         )
 
-            X_bar_debug = X_roi[idx]
-            X_bar_debug[:, 3] = 1.0 / num_particles  # normalize weights
+    #         X_bar_debug = X_roi[idx]
+    #         X_bar_debug[:, 3] = 1.0 / num_particles  # normalize weights
 
-            print("[DEBUG] Initialized particles in ROI "
-                  "x=[3000,5000], y=[2000,4000]")
+    #         print("[DEBUG] Initialized particles in ROI "
+    #               "x=[3000,5000], y=[2000,4000]")
 
-            return X_bar_debug
-    # -----------------------------------------------------------
+    #         return X_bar_debug
+    # # -----------------------------------------------------------
 
 
 
@@ -252,7 +252,7 @@ if __name__ == '__main__':
         if (meas_type == "L"):
             X_bar = resampler.low_variance_sampler(X_bar)
         
-        if args.visualize and num_particles > 1 and (time_idx % 40 == 0):  # For debug
+        if args.visualize and num_particles > 1 and (time_idx % 20 == 0):  # For debug
             visualize_timestep(X_bar, time_idx, args.output)
         
             

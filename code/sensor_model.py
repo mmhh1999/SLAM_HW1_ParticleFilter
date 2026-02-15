@@ -169,6 +169,74 @@ class SensorModel:
         p /= (self._z_hit + self._z_short + self._z_max + self._z_rand)
         return p, pHit, pShort, pMax, pRand
 
+    def rayCast(self, x_t1):
+        """
+        Vectorized version of the original ray casting logic.
+        Keeps the same behavior: for each beam, find the first range r where:
+        - in map bounds (xInt < 800 and yInt < 800)  [same as original]
+        - abs(OccMap[yInt, xInt]) > 0.35            [same as original]
+        """
+
+        beamsRange = np.zeros(self.nLaser)
+        laserX = np.zeros(self.nLaser)
+        laserY = np.zeros(self.nLaser)
+        angs = np.zeros(self.nLaser)
+        L = 25
+
+        xc = x_t1[0]
+        yc = x_t1[1]
+        myPhi = x_t1[2]
+
+        ang = myPhi - np.pi / 2
+        ang = self.WrapToPi(ang)
+
+        offSetX = xc + L * np.cos(ang)
+        offSetY = yc + L * np.sin(ang)
+
+        angStep = np.pi / self.nLaser
+
+        # set ray step size (same as original)
+        r = np.linspace(0, self.laserMax, 800)
+
+        for i in range(self.nLaser):
+            ang += angStep
+            ang = self.WrapToPi(ang)
+
+            # Compute all candidate points along the ray at once
+            x = offSetX + r * np.cos(ang)
+            y = offSetY + r * np.sin(ang)
+
+            xInt = np.floor(x / self.resolution).astype(int)
+            yInt = np.floor(y / self.resolution).astype(int)
+
+            # Same bound check as original code (only < 800, no >= 0)
+            in_bounds = (0 <= xInt) & (xInt < 800) & (0 <= yInt) & (yInt < 800)
+
+            # Avoid invalid indexing by applying in_bounds first
+            hit = np.zeros_like(in_bounds, dtype=bool)
+            valid_idx = np.nonzero(in_bounds)[0]
+            if valid_idx.size > 0:
+                xi = xInt[valid_idx]
+                yi = yInt[valid_idx]
+                hit_vals = np.abs(self.OccMap[yi, xi]) > 0.35
+                hit[valid_idx] = hit_vals
+
+            # Find the first hit along r (same "break at first hit" behavior)
+            hit_indices = np.flatnonzero(hit)
+            if hit_indices.size > 0:
+                idx = hit_indices[0]
+                beamsRange[i] = r[idx]
+
+                # Keep the same (unused) phi computation semantics
+                _ = np.arctan2((offSetY - yInt[idx]), (offSetX - xInt[idx]))
+
+                angs[i] = ang
+                laserX[i] = xInt[idx]
+                laserY[i] = yInt[idx]
+                # implicit "break" achieved by only taking the first idx
+
+        return beamsRange, laserX, laserY
+
     # def rayCast(self, x_t1):
 
     #     '''
@@ -283,95 +351,28 @@ class SensorModel:
 
     #     return beamsRange, laserX, laserY
 
-    #     """ Test Method """
+        """ Test Method """
 
-    #     # L = 25
-    #     #
-    #     # ang = np.linspace(x_t1[2] - np.pi / 2, x_t1[2] + np.pi / 2, 180)[:, np.newaxis]
-    #     # r = np.linspace(0, self.laserMax, 200)[np.newaxis, :]
-    #     #
-    #     # x = x_t1[0] + (r + L) * np.cos(ang)
-    #     # y = x_t1[1] + (r + L) * np.sin(ang)
-    #     #
-    #     # xInt = np.floor(x / self.resolution).astype(int)
-    #     # yInt = np.floor(y / self.resolution).astype(int)
-    #     #
-    #     # for i in range(self.nLaser):
-    #     #     for j in range(r.shape[1]):
-    #     #         if xInt[i][j] < 800 and yInt[i][j] < 800 and np.abs(self.OccMap[yInt[i][j], xInt[i][j]]) > 0.35:
-    #     #             self.laserX[i] = xInt[i][j]
-    #     #             self.laserY[i] = yInt[i][j]
-    #     #             self.beamsRange[i] = r[0][j]
-    #     #             break
-    #     #
-    #     # return self.beamsRange, self.laserX, self.laserY
-    
-    def rayCast(self, x_t1):
-        """
-        Ray casting for a single particle pose.
-
-        Input:
-            x_t1 : [x, y, theta] in world frame (cm, rad)
-        Output:
-            beamsRange : expected ranges (z*) for each beam
-            laserX, laserY : grid coordinates of first hit cell
-
-        For each beam, we sample points along the ray direction,
-        convert to map indices, and return the first occupied cell
-        (|OccMap| > 0.35). If no hit is found, the range remains 0.
-
-        This version vectorizes distance sampling using NumPy
-        to reduce inner Python loops and improve runtime.
-        """
-        beamsRange = np.zeros(self.nLaser)
-        laserX = np.zeros(self.nLaser)
-        laserY = np.zeros(self.nLaser)
-
-        L = 25
-        xc, yc, myPhi = x_t1[0], x_t1[1], x_t1[2]
-
-        ang = self.WrapToPi(myPhi - np.pi / 2)
-        offSetX = xc + L * np.cos(ang)
-        offSetY = yc + L * np.sin(ang)
-
-        angStep = np.pi / self.nLaser
-
-        r = np.linspace(0, self.laserMax, 800)
-
-        H, W = self.OccMap.shape
-
-        for i in range(self.nLaser):
-            ang = self.WrapToPi(ang + angStep)
-            c, s = np.cos(ang), np.sin(ang)
-
-            x = offSetX + r * c
-            y = offSetY + r * s
-
-            xInt = np.floor(x / self.resolution).astype(np.int32)
-            yInt = np.floor(y / self.resolution).astype(np.int32)
-
-            valid = (xInt >= 0) & (xInt < W) & (yInt >= 0) & (yInt < H)
-            if not np.any(valid):
-                # beamsRange[i] = self.laserMax
-                continue
-
-            xIntv = xInt[valid]
-            yIntv = yInt[valid]
-            rv = r[valid]
-
-            hit = np.abs(self.OccMap[yIntv, xIntv]) > 0.35
-            if np.any(hit):
-                # j = np.argmax(hit)  # first True
-                j = np.flatnonzero(hit)[0]  # first hit
-                beamsRange[i] = rv[j]
-                laserX[i] = xIntv[j]
-                laserY[i] = yIntv[j]
-            # else:
-            #     beamsRange[i] = self.laserMax
-
-        return beamsRange, laserX, laserY
-
-
+        # L = 25
+        #
+        # ang = np.linspace(x_t1[2] - np.pi / 2, x_t1[2] + np.pi / 2, 180)[:, np.newaxis]
+        # r = np.linspace(0, self.laserMax, 200)[np.newaxis, :]
+        #
+        # x = x_t1[0] + (r + L) * np.cos(ang)
+        # y = x_t1[1] + (r + L) * np.sin(ang)
+        #
+        # xInt = np.floor(x / self.resolution).astype(int)
+        # yInt = np.floor(y / self.resolution).astype(int)
+        #
+        # for i in range(self.nLaser):
+        #     for j in range(r.shape[1]):
+        #         if xInt[i][j] < 800 and yInt[i][j] < 800 and np.abs(self.OccMap[yInt[i][j], xInt[i][j]]) > 0.35:
+        #             self.laserX[i] = xInt[i][j]
+        #             self.laserY[i] = yInt[i][j]
+        #             self.beamsRange[i] = r[0][j]
+        #             break
+        #
+        # return self.beamsRange, self.laserX, self.laserY
 
     def beam_range_finder_model(self, z_t1_arr, x_t1):
         """
@@ -391,7 +392,6 @@ class SensorModel:
         log_likelihood_sum = 0.0
         for i in range(self.nLaser):
             probs[i], _, _, _, _ = self.getProbability(zt_star[i], z_reading[i])
-            probs[i] = max(probs[i], 1e-12)  # Avoid zero probabilities
             log_likelihood_sum += np.log(probs[i])
 
         # Compute the overall likelihood
