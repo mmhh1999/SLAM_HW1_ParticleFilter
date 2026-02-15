@@ -77,64 +77,6 @@ class SensorModel:
         angle_wrapped = angle - 2 * np.pi * np.floor((angle + np.pi) / (2 * np.pi))
         return angle_wrapped
 
-    # def WrapAngle(self,angle): # -2pi to 2pi
-    #     if angle >= 2*np.pi:
-    #         angle -=  (angle // (2*np.pi))*2*np.pi
-
-    #     elif angle <= -2*np.pi:
-    #         angle +=  (np.abs(angle) // (2*np.pi))*2*np.pi
-
-    #     return angle
-
-    # def ConvTo90(self,angle): # -pi/2 to pi/2
-    #     if angle >= np.pi/2:
-    #         angle -= (angle // (np.pi/2))*np.pi/2
-    #     elif angle <= - np.pi/2:
-    #         angle += (angle // (np.pi/2))*np.pi/2
-    #     return angle
-
-    # def getQuad(self,angle):
-    #     if (angle>=0 and angle<np.pi/2) or (angle>=-2*np.pi and angle <-3*np.pi/2):
-    #         quad = 1
-    #     elif (angle>=np.pi/2 and angle <np.pi) or (angle >= -3*np.pi/2 and angle < -np.pi):
-    #         quad = 2
-    #     elif (angle >= 3*np.pi/2 and angle <2*np.pi) or (angle >= -np.pi/2 and angle <0):
-    #         quad = 4
-    #     else:
-    #         quad = 3
-    #     return quad
-
-    # def getProbability_A(self, z_star, z_reading):
-    #     # Hit
-    #     if 0 < z_reading < self.laserMax:
-    #         gauss_norm = self.norm.cdf(self.laserMax, loc=z_star, scale=self._sigma_hit) - self.norm.cdf(0,loc=z_star, scale=self._sigma_hit)
-    #         gauss = self.norm.pdf(z_reading,loc=z_star, scale=self._sigma_hit) / gauss_norm
-    #     else:
-    #         gauss = 0
-    #
-    #     # short
-    #     if 0 < z_reading < z_star:
-    #         exp = self._lambda_short*np.exp(-self._lambda_short*z_reading)
-    #         exp *= 1/(1-np.exp(-self._lambda_short*z_star))
-    #     else:
-    #         exp = 0
-    #
-    #     # Max
-    #     if z_reading >= self.laserMax:
-    #         p_max = 1
-    #     else:
-    #         p_max = 0
-    #
-    #     # random
-    #     if (z_reading > 0 and z_reading < self.laserMax):
-    #         p_rand = 1/self.laserMax
-    #     else:
-    #         p_rand = 0
-    #     p = self._z_hit*gauss + self._z_short*exp + self._z_max*p_max + self._z_rand*p_rand
-    #     p /= (self._z_hit + self._z_short + self._z_max + self._z_rand)
-
-    # return p
-
     def getProbability(self, z_star, z_reading):
         # hit
         if 0 <= z_reading <= self.laserMax:
@@ -237,142 +179,6 @@ class SensorModel:
 
         return beamsRange, laserX, laserY
 
-    # def rayCast(self, x_t1):
-
-    #     '''
-    #      vectorizing (mask) ---
-    #     '''
-    #     # beamsRange = np.zeros(self.nLaser)
-    #     # laserX = np.zeros(self.nLaser)
-    #     # laserY = np.zeros(self.nLaser)
-    #     # angs   = np.zeros(self.nLaser)
-    #     # L = 25
-
-    #     # xc = x_t1[0]
-    #     # yc = x_t1[1]
-    #     # myPhi = x_t1[2]
-    #     # ang = myPhi - np.pi/2
-    #     # ang =self.WrapToPi(ang)
-    #     # offSetX = xc + L* np.cos(ang)
-    #     # offSetY = yc + L* np.sin(ang)
-
-    #     # angStep = np.pi/self.nLaser
-    #     # r = np.linspace(0,self.laserMax,500)
-
-    #     # for i in range(self.nLaser):
-
-    #     #     ang += angStep*i
-    #     #     ang = self.WrapToPi(ang)
-    #     #     # casting rays
-    #     #     x = offSetX + r * np.cos(ang)
-    #     #     y = offSetY + r * np.sin(ang)
-
-    #     #     xInt = np.floor(x/self.resolution).astype(int)
-    #     #     yInt = np.floor(y/self.resolution).astype(int)
-
-    #     #     # mask = np.zeros_like(xInt).astype(bool)
-    #     #     # mask1= np.zeros_like(xInt).astype(bool)
-    #     #     # mask1[(xInt < 800) & (xInt>=0) & (yInt>=0) & (yInt < 800)] == True
-    #     #     # print("x",xInt[mask1].shape,yInt[mask1].shape)
-    #     #     # print("asdfsaf",self.OccMap[yInt[mask1],xInt[mask1]])
-
-    #     #     xWithin = np.argwhere(xInt<800)
-    #     #     yWithin = np.argwhere(yInt<800)
-    #     #     within = np.intersect1d(xWithin,yWithin)
-    #     #     hitInd = np.
-
-    #     #     ii = 0
-    #     #     for xx, yy in zip(xInt[mask1], yInt[mask1]):
-    #     #         if((np.abs(self.OccMap[yInt[xx],xInt[yy]]) > 0.35)):
-    #     #             idx = ii 
-    #     #             break
-    #     #         ii+=1
-
-    #     #     idx = np.argwhere(mask1==True)[ii]
-    #     #     mask[(np.abs(self.OccMap[yInt[mask1],xInt[mask1]]) > 0.35)] == True
-    #     #     mask[((xInt < 800) & (yInt < 800)) & (np.abs(self.OccMap[yInt,xInt]) > 0.35)] == True
-    #     #     laserX[idx] = x[idx]
-    #     #     laserY[idx] = y[idx]
-
-    #     #     beamsRange = r[idx]
-
-    #     ''' 
-    #     normal looping -----
-    #     '''
-
-    #     beamsRange = np.zeros(self.nLaser)
-    #     laserX = np.zeros(self.nLaser)
-    #     laserY = np.zeros(self.nLaser)
-    #     angs = np.zeros(self.nLaser)
-    #     L = 25
-
-    #     xc = x_t1[0]
-    #     yc = x_t1[1]
-    #     myPhi = x_t1[2]
-    #     ang = myPhi - np.pi / 2
-    #     ang = self.WrapToPi(ang)
-    #     offSetX = xc + L * np.cos(ang)
-    #     offSetY = yc + L * np.sin(ang)
-
-    #     angStep = np.pi / self.nLaser
-
-    #     '''
-    #     set ray step size
-    #     '''
-    #     r = np.linspace(0, self.laserMax, 800)
-
-    #     for i in range(self.nLaser):
-
-    #         ang += angStep
-    #         # print(ang*180/np.pi)
-    #         ang = self.WrapToPi(ang)
-    #         # print("angle after wrapped: ",ang*180/np.pi)
-    #         # print("current angle:", ang*180/np.pi)
-    #         # for idx, rs in enumerate(r):
-    #         for rs in r:
-
-    #             x = offSetX + rs * np.cos(ang)
-    #             y = offSetY + rs * np.sin(ang)
-
-    #             xInt = np.floor(x / self.resolution).astype(int)
-    #             yInt = np.floor(y / self.resolution).astype(int)
-
-    #             if xInt < 800 and yInt < 800 and np.abs(self.OccMap[yInt, xInt]) > 0.35:
-    #                 beamsRange[i] = rs
-    #                 phi = np.arctan2((offSetY - yInt), (offSetX - xInt))  # phase
-    #                 angs[i] = ang
-    #                 laserX[i] = xInt
-    #                 laserY[i] = yInt
-    #                 break
-    #                 # print(x,",",y)
-    #     # print(np.abs(angs[0]*180/np.pi-angs[-1]*180/np.pi))
-
-    #     # print(beamsRange)
-
-    #     return beamsRange, laserX, laserY
-
-        """ Test Method """
-
-        # L = 25
-        #
-        # ang = np.linspace(x_t1[2] - np.pi / 2, x_t1[2] + np.pi / 2, 180)[:, np.newaxis]
-        # r = np.linspace(0, self.laserMax, 200)[np.newaxis, :]
-        #
-        # x = x_t1[0] + (r + L) * np.cos(ang)
-        # y = x_t1[1] + (r + L) * np.sin(ang)
-        #
-        # xInt = np.floor(x / self.resolution).astype(int)
-        # yInt = np.floor(y / self.resolution).astype(int)
-        #
-        # for i in range(self.nLaser):
-        #     for j in range(r.shape[1]):
-        #         if xInt[i][j] < 800 and yInt[i][j] < 800 and np.abs(self.OccMap[yInt[i][j], xInt[i][j]]) > 0.35:
-        #             self.laserX[i] = xInt[i][j]
-        #             self.laserY[i] = yInt[i][j]
-        #             self.beamsRange[i] = r[0][j]
-        #             break
-        #
-        # return self.beamsRange, self.laserX, self.laserY
 
     def beam_range_finder_model(self, z_t1_arr, x_t1):
         """
@@ -397,3 +203,61 @@ class SensorModel:
         # Compute the overall likelihood
         q = self.nLaser / np.abs(log_likelihood_sum)
         return q, probs, laserX, laserY
+    
+    def beam_range_finder_model_debug(self, z_t1_arr, x_t1):
+        """
+        Debug helper: returns per-beam component stats for ONE particle.
+        Keeps the same ray casting + getProbability logic.
+        """
+        step = int(180 / self.nLaser)
+        z_reading = [z_t1_arr[n] for n in range(0, 180, step)]
+
+        zt_star, laserX, laserY = self.rayCast(x_t1)
+
+        p_mix = np.zeros(self.nLaser, dtype=np.float64)
+        p_hit = np.zeros(self.nLaser, dtype=np.float64)
+        p_short = np.zeros(self.nLaser, dtype=np.float64)
+        p_max = np.zeros(self.nLaser, dtype=np.float64)
+        p_rand = np.zeros(self.nLaser, dtype=np.float64)
+
+        for i in range(self.nLaser):
+            p, ph, ps, pm, pr = self.getProbability(zt_star[i], z_reading[i])
+            p_mix[i] = p
+            p_hit[i] = ph
+            p_short[i] = ps
+            p_max[i] = pm
+            p_rand[i] = pr
+
+        # "占比": fraction of each component in the mixture numerator, averaged over beams
+        denom_w = (self._z_hit + self._z_short + self._z_max + self._z_rand)
+        num_hit = self._z_hit * p_hit
+        num_short = self._z_short * p_short
+        num_max = self._z_max * p_max
+        num_rand = self._z_rand * p_rand
+        num_sum = num_hit + num_short + num_max + num_rand
+
+        # Avoid divide-by-zero
+        frac_hit = np.where(num_sum > 0, num_hit / num_sum, 0.0)
+        frac_short = np.where(num_sum > 0, num_short / num_sum, 0.0)
+        frac_max = np.where(num_sum > 0, num_max / num_sum, 0.0)
+        frac_rand = np.where(num_sum > 0, num_rand / num_sum, 0.0)
+
+        dbg = {
+            # Per-beam mean of raw components
+            "mean_p_hit": float(np.mean(p_hit)),
+            "mean_p_short": float(np.mean(p_short)),
+            "mean_p_max": float(np.mean(p_max)),
+            "mean_p_rand": float(np.mean(p_rand)),
+
+            # Per-beam mean of mixture fractions ("占比")
+            "mean_frac_hit": float(np.mean(frac_hit)),
+            "mean_frac_short": float(np.mean(frac_short)),
+            "mean_frac_max": float(np.mean(frac_max)),
+            "mean_frac_rand": float(np.mean(frac_rand)),
+
+            # Mixture p range over beams (for sanity)
+            "beam_p_mix_min": float(np.min(p_mix)),
+            "beam_p_mix_med": float(np.median(p_mix)),
+            "beam_p_mix_max": float(np.max(p_mix)),
+        }
+        return dbg, laserX, laserY

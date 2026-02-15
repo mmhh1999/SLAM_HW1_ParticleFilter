@@ -20,6 +20,9 @@ import time
 from multiprocessing import Pool
 from itertools import product
 
+from phase0_debug import Phase0Logger
+
+
 def visualize_map(occupancy_map):
     fig = plt.figure()
     mng = plt.get_current_fig_manager()
@@ -154,6 +157,9 @@ if __name__ == '__main__':
     src_path_log = args.path_to_log
     os.makedirs(args.output, exist_ok=True)
 
+    phase0 = Phase0Logger(enabled=args.debug, out_dir=args.output, every=20, filename="debug_phase0.npy")
+
+
     map_obj = MapReader(src_path_map)
     occupancy_map = map_obj.get_map()
     logfile = open(src_path_log, 'r')
@@ -246,6 +252,48 @@ if __name__ == '__main__':
         X_bar = X_bar_new
         u_t0 = u_t1
 
+        # ---------------- Phase 0 logging (every 20 laser steps) ----------------
+        if phase0.should_record(time_idx, meas_type):
+            w = X_bar[:, 3].astype(np.float64)
+
+            # scan_score range over particles (your w_t is the scan score per particle in current code)
+            scan_min = float(np.min(w))
+            scan_med = float(np.median(w))
+            scan_max = float(np.max(w))
+
+            # weight distribution + ESS (normalize for interpretation)
+            w_sum = float(np.sum(w))
+            w_norm = (w / w_sum) if w_sum > 0 else np.zeros_like(w)
+            ess = Phase0Logger.ess(w_norm)
+            wmax = float(np.max(w_norm)) if w_norm.size else 0.0
+            wmed = float(np.median(w_norm)) if w_norm.size else 0.0
+
+            # pick the best particle (highest scan score) to inspect beam breakdown
+            best_idx = int(np.argmax(w)) if w.size else 0
+            best_pose = X_bar[best_idx, 0:3].copy()
+
+            beam_dbg, _, _ = sensor_model.beam_range_finder_model_debug(ranges, best_pose)
+
+            phase0.add({
+                "time_idx": int(time_idx),
+                "time_stamp": float(time_stamp),
+
+                # 1) per-beam component means & fractions ("占比") for best particle
+                **beam_dbg,
+
+                # 2) scan_score range over particles
+                "scan_min": scan_min,
+                "scan_med": scan_med,
+                "scan_max": scan_max,
+
+                # 3) weight distribution & ESS
+                "w_norm_max": wmax,
+                "w_norm_med": wmed,
+                "ess": float(ess),
+                "best_idx": best_idx,
+            })
+        # ------------------------------------------------------------------------
+
         """
         RESAMPLING
         """
@@ -255,5 +303,7 @@ if __name__ == '__main__':
         if args.visualize and num_particles > 1 and (time_idx % 20 == 0):  # For debug
             visualize_timestep(X_bar, time_idx, args.output)
         
-            
+    phase0.save()
+    print("Saved Phase0 debug to:", os.path.join(args.output, "debug_phase0.npy"))
+
     print("Program time: %s seconds" % (time.time() - start_time))
