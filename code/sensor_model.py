@@ -198,11 +198,18 @@ class SensorModel:
         log_likelihood_sum = 0.0
         for i in range(self.nLaser):
             probs[i], _, _, _, _ = self.getProbability(zt_star[i], z_reading[i])
+            probs[i] = max(probs[i], 1e-12)  # Avoid zero probabilities
             log_likelihood_sum += np.log(probs[i])
 
         # Compute the overall likelihood
-        q = self.nLaser / np.abs(log_likelihood_sum)
+        # q = self.nLaser / np.abs(log_likelihood_sum)
+        # q = float(np.exp(log_likelihood_sum / self.nLaser))  # Geometric mean to avoid underflow
+        mean_log_likelihood = log_likelihood_sum / self.nLaser
+        dampening = 0.3  # Tune this!
+        q = float(np.exp(dampening * mean_log_likelihood))  # ✓ Proper probability
         return q, probs, laserX, laserY
+    
+    
     
     def beam_range_finder_model_debug(self, z_t1_arr, x_t1):
         """
