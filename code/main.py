@@ -142,8 +142,8 @@ if __name__ == '__main__':
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_to_map', default=r'C:\Users\12527\Desktop\SLAM_HW1_ParticleFilter\data\map\wean.dat')
-    parser.add_argument('--path_to_log', default=r'C:\Users\12527\Desktop\SLAM_HW1_ParticleFilter\data\log\robotdata1.log')
+    parser.add_argument('--path_to_map', default=r'data/map/wean.dat')
+    parser.add_argument('--path_to_log', default=r'data/log/robotdata1.log')
     parser.add_argument('--output', default='results')
     parser.add_argument('--num_particles', default=500, type=int)
     parser.add_argument('--visualize', action='store_true')
@@ -272,7 +272,9 @@ if __name__ == '__main__':
             best_idx = int(np.argmax(w)) if w.size else 0
             best_pose = X_bar[best_idx, 0:3].copy()
 
-            beam_dbg, _, _ = sensor_model.beam_range_finder_model_debug(ranges, best_pose)
+            beam_dbg, laserX, laserY = sensor_model.beam_range_finder_model_debug(ranges, best_pose)
+
+            # Beam visualization (Correctness verification)
 
             phase0.add({
                 "time_idx": int(time_idx),
