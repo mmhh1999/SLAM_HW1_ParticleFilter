@@ -4,7 +4,7 @@ import numpy as np
 
 class Phase0Logger:
     """Minimal Phase 0 logger: record every K steps and save to .npy."""
-    def __init__(self, enabled: bool, out_dir: str, every: int = 20, filename: str = "debug_phase0.npy"):
+    def __init__(self, enabled: bool, out_dir: str, every: int = 10, filename: str = "debug_phase0.npy"):
         self.enabled = enabled
         self.every = every
         self.filename = filename

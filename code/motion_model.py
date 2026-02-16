@@ -26,8 +26,8 @@ class MotionModel:
         # self._alpha4 = 0.01*10
         self._alpha1 = 0.0005
         self._alpha2 = 0.0005
-        self._alpha3 = 0.001
-        self._alpha4 = 0.001
+        self._alpha3 = 0.0025
+        self._alpha4 = 0.0025
 
     def WrapToPi(self,angle):
         

@@ -243,8 +243,8 @@ if __name__ == '__main__':
 
                 w_t, probs, laserX, laserY = sensor_model.beam_range_finder_model(z_t, x_t1)
                 X_bar_new[m, :] = np.hstack((x_t1, w_t))
-                if args.visualize and num_particles == 1:
-                    visualize_timestep(X_bar, time_idx, args.output)
+                # if args.visualize and num_particles == 1:
+                #     visualize_timestep(X_bar, time_idx, args.output)
 
             else:
                 X_bar_new[m, :] = np.hstack((x_t1, X_bar[m, 3]))
@@ -300,7 +300,9 @@ if __name__ == '__main__':
         if (meas_type == "L"):
             X_bar = resampler.low_variance_sampler(X_bar)
         
-        if args.visualize and num_particles > 1 and (time_idx % 20 == 0):  # For debug
+        if args.visualize and args.debug==False:
+            visualize_timestep(X_bar, time_idx, args.output)
+        elif args.visualize and args.debug and (time_idx % 20 == 0):
             visualize_timestep(X_bar, time_idx, args.output)
         
     phase0.save()

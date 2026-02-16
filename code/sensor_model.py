@@ -49,12 +49,15 @@ class SensorModel:
         TODO : Tune Sensor Model parameters here
         The original numbers are for reference but HAVE TO be tuned.
         """
-        self._z_hit = 150 # 5
-        self._z_short = 17.5 # 0.5
-        self._z_max = 15 # 0.5
-        self._z_rand = 100 # 200
-        self._sigma_hit = 100
+        self._z_hit = 120 # 5
+        self._z_short = 20 # 0.5
+        self._z_max = 20 # 0.5
+        self._z_rand = 35 # 200
+
+        self._sigma_hit = 50
         self._lambda_short = 15
+        self._dampening = 0.7
+
         self._min_probability = 0.35
         self._subsampling = 2
 
@@ -205,8 +208,7 @@ class SensorModel:
         # q = self.nLaser / np.abs(log_likelihood_sum)
         # q = float(np.exp(log_likelihood_sum / self.nLaser))  # Geometric mean to avoid underflow
         mean_log_likelihood = log_likelihood_sum / self.nLaser
-        dampening = 0.3  # Tune this!
-        q = float(np.exp(dampening * mean_log_likelihood))  # ✓ Proper probability
+        q = float(np.exp(self._dampening * mean_log_likelihood)) 
         return q, probs, laserX, laserY
     
     
@@ -235,7 +237,7 @@ class SensorModel:
             p_max[i] = pm
             p_rand[i] = pr
 
-        # "占比": fraction of each component in the mixture numerator, averaged over beams
+        # fraction of each component in the mixture numerator, averaged over beams
         denom_w = (self._z_hit + self._z_short + self._z_max + self._z_rand)
         num_hit = self._z_hit * p_hit
         num_short = self._z_short * p_short
@@ -256,7 +258,7 @@ class SensorModel:
             "mean_p_max": float(np.mean(p_max)),
             "mean_p_rand": float(np.mean(p_rand)),
 
-            # Per-beam mean of mixture fractions ("占比")
+            # Per-beam mean of mixture fractions
             "mean_frac_hit": float(np.mean(frac_hit)),
             "mean_frac_short": float(np.mean(frac_short)),
             "mean_frac_max": float(np.mean(frac_max)),
