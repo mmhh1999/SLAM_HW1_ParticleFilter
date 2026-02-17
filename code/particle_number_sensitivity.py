@@ -70,7 +70,7 @@ for N in N_list:
 # Plot variance curves
 plt.figure(figsize=(10,6))
 
-# Plot total variance (x方差+y方差) for each N
+# Plot total variance for each N
 plt.figure(figsize=(10,6))
 for N in N_list:
     total_var = np.array(results[N]['var_x']) + np.array(results[N]['var_y'])
