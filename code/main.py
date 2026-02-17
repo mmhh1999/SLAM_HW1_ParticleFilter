@@ -34,11 +34,20 @@ def visualize_map(occupancy_map):
 def visualize_timestep(X_bar, tstep, output_path):
     x_locs = X_bar[:, 0] / 10.0
     y_locs = X_bar[:, 1] / 10.0
-    scat = plt.scatter(x_locs, y_locs, c='r', marker='o',s=10)
+    # Assume random-injected particles are at the front (first N_random)
+    N_random = int(0.05 * X_bar.shape[0])
+    if N_random > 0:
+        # Plot random particles in blue with alpha
+        scat_rand = plt.scatter(x_locs[:N_random], y_locs[:N_random], c='b', marker='o', s=10, alpha=0.3, label='Random')
+        scat_main = plt.scatter(x_locs[N_random:], y_locs[N_random:], c='r', marker='o', s=10, alpha=0.8, label='Main')
+    else:
+        scat_main = plt.scatter(x_locs, y_locs, c='r', marker='o', s=10, alpha=0.8)
     plt.savefig('{}/{:04d}.png'.format(output_path, tstep))
 
     plt.pause(0.00001)
-    scat.remove()
+    if N_random > 0:
+        scat_rand.remove()
+    scat_main.remove()
 
 def init_particles_random(num_particles, occupancy_map):
 
@@ -150,14 +159,18 @@ if __name__ == '__main__':
     parser.add_argument('--ray', action='store_true')
     parser.add_argument('--belief', action='store_true')
     parser.add_argument('--debug', action='store_true') # init particles only in a fixed ROI
-    
+
     args = parser.parse_args()
 
     src_path_map = args.path_to_map
     src_path_log = args.path_to_log
-    os.makedirs(args.output, exist_ok=True)
 
-    phase0 = Phase0Logger(enabled=args.debug, out_dir=args.output, every=20, filename="debug_phase0.npy")
+    # Extract log file name (without extension) for subfolder
+    log_file_name = os.path.splitext(os.path.basename(src_path_log))[0]
+    output_subdir = os.path.join(args.output, log_file_name)
+    os.makedirs(output_subdir, exist_ok=True)
+
+    phase0 = Phase0Logger(enabled=args.debug, out_dir=output_subdir, every=20, filename="debug_phase0.npy")
 
 
     map_obj = MapReader(src_path_map)
@@ -252,6 +265,7 @@ if __name__ == '__main__':
         X_bar = X_bar_new
         u_t0 = u_t1
 
+
         # ---------------- Phase 0 logging (every 20 laser steps) ----------------
         if phase0.should_record(time_idx, meas_type):
             w = X_bar[:, 3].astype(np.float64)
@@ -301,13 +315,20 @@ if __name__ == '__main__':
         """
         if (meas_type == "L"):
             X_bar = resampler.low_variance_sampler(X_bar)
+            # --- Kidnapped robot improvement: inject random particles ---
+            random_injection_ratio = 0.05  # 5% particles are random
+            N_random = int(num_particles * random_injection_ratio)
+            if N_random > 0:
+                random_particles = init_particles_freespace(N_random, occupancy_map)
+                X_bar[:N_random, :] = random_particles
         
         if args.visualize and args.debug==False:
-            visualize_timestep(X_bar, time_idx, args.output)
+            visualize_timestep(X_bar, time_idx, output_subdir)
         elif args.visualize and args.debug and (time_idx % 20 == 0):
-            visualize_timestep(X_bar, time_idx, args.output)
+            visualize_timestep(X_bar, time_idx, output_subdir)
         
     phase0.save()
-    print("Saved Phase0 debug to:", os.path.join(args.output, "debug_phase0.npy"))
+    print("Saved Phase0 debug to:", os.path.join(output_subdir, "debug_phase0.npy"))
+
 
     print("Program time: %s seconds" % (time.time() - start_time))

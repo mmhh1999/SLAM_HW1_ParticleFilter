@@ -2,40 +2,33 @@ import os
 import re
 import cv2
 from tqdm import tqdm
+import argparse
 
-# Directory containing png images
-image_dir = r"C:\Users\12527\Desktop\SLAM_HW1_ParticleFilter\code\results"
+parser = argparse.ArgumentParser()
+parser.add_argument('--input', required=True, help='Directory containing PNG images')
+parser.add_argument('--output', required=True, help='Output video file path')
+parser.add_argument('--fps', type=int, default=30, help='Frames per second')
+args = parser.parse_args()
 
-# Output video path
-output_path = os.path.join(image_dir, "animation.mp4")
+image_dir = args.input
+output_path = args.output
+fps = args.fps
+fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 
-# Video settings
-fps = 30  # Change this to control speed (e.g., 30 for faster)
-fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Codec for .mp4
-
-# Regular expression to match filenames like 0.png, 12.png, etc.
 pattern = re.compile(r"^(\d+)\.png$")
-
-# Collect numeric png files
 files = []
 for filename in os.listdir(image_dir):
     m = pattern.match(filename)
     if m:
         idx = int(m.group(1))
         files.append((idx, filename))
-
-# Sort by numeric order
 files.sort(key=lambda x: x[0])
-
 if not files:
     raise RuntimeError(f"No numeric PNG files found in: {image_dir}")
-
-# Read first frame to get frame size
 first_path = os.path.join(image_dir, files[0][1])
 first_frame = cv2.imread(first_path, cv2.IMREAD_COLOR)
 if first_frame is None:
     raise RuntimeError(f"Failed to read the first image: {first_path}")
-
 height, width = first_frame.shape[:2]
 
 # Create video writer
